@@ -1,19 +1,27 @@
 package com.ledgerbridge.settlement.service;
 
+import com.ledgerbridge.settlement.blockchain.SettlementLedgerService;
 import com.ledgerbridge.settlement.domain.MoneyMovementTransaction;
 import com.ledgerbridge.settlement.repository.MoneyMovementTransactionRepository;
 import org.springframework.stereotype.Service;
+import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.UUID;
 
 @Service
 public class MoneyMovementService {
 
     private final MoneyMovementTransactionRepository transactionRepository;
+    private final SettlementLedgerService settlementLedgerService;
 
-    public MoneyMovementService(MoneyMovementTransactionRepository transactionRepository) {
+    public MoneyMovementService(
+            MoneyMovementTransactionRepository transactionRepository,
+            SettlementLedgerService settlementLedgerService) {
+
         this.transactionRepository = transactionRepository;
+        this.settlementLedgerService = settlementLedgerService;
     }
 
     public MoneyMovementTransaction createTransaction(
@@ -52,6 +60,31 @@ public class MoneyMovementService {
         transaction.markValidated();
         transaction.markPending();
 
-        return transactionRepository.save(transaction);
+        transactionRepository.save(transaction);
+
+        try {
+            TransactionReceipt receipt =
+                    settlementLedgerService.recordSettlement(
+                            transaction.getId().toString(),
+                            sourceAccountId,
+                            destinationAccountId,
+                            amount.movePointRight(2).toBigIntegerExact(),
+                            currency
+                    );
+
+            transaction.markConfirmed(
+                    receipt.getTransactionHash());
+
+            return transactionRepository.save(transaction);
+
+        } catch (Exception exception) {
+
+            transaction.markFailed();
+            transactionRepository.save(transaction);
+
+            throw new IllegalStateException(
+                    "Blockchain settlement failed",
+                    exception);
+        }
     }
 }

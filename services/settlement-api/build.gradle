@@ -25,8 +25,40 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
     implementation 'org.web3j:core:4.14.0'
+    implementation 'org.web3j:codegen:4.14.0'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+tasks.register('generateContractWrappers', JavaExec) {
+    group = 'blockchain'
+    description = 'Generate Java wrappers from Solidity ABI and BIN'
+
+    classpath = configurations.runtimeClasspath
+    mainClass = 'org.web3j.codegen.SolidityFunctionWrapperGenerator'
+
+    args(
+        '-a', '../../blockchain/build/SettlementLedger.abi',
+        '-b', '../../blockchain/build/SettlementLedger.bin',
+        '-o', '../../blockchain/generated',
+        '-p', 'com.ledgerbridge.settlement.blockchain.generated'
+    )
+}
+
+tasks.register('runSettlementLedgerDeployer', JavaExec) {
+    group = 'blockchain'
+    description = 'Deploy SettlementLedger to the local Besu network'
+
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.ledgerbridge.settlement.blockchain.SettlementLedgerDeployer'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs += '../../blockchain/generated'
+        }
+    }
 }
