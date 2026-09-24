@@ -1,5 +1,7 @@
 package com.ledgerbridge.settlement.controller;
 
+import com.ledgerbridge.settlement.blockchain.LedgerSettlement;
+import com.ledgerbridge.settlement.blockchain.SettlementLedgerService;
 import com.ledgerbridge.settlement.domain.MoneyMovementTransaction;
 import com.ledgerbridge.settlement.service.MoneyMovementService;
 import jakarta.validation.Valid;
@@ -15,8 +17,11 @@ public class MoneyMovementController {
 
     private final MoneyMovementService moneyMovementService;
 
-    public MoneyMovementController(MoneyMovementService moneyMovementService) {
+    private final SettlementLedgerService settlementLedgerService;
+
+    public MoneyMovementController(MoneyMovementService moneyMovementService, SettlementLedgerService settlementLedgerService)   {
         this.moneyMovementService = moneyMovementService;
+        this.settlementLedgerService = settlementLedgerService;
     }
 
     @PostMapping
@@ -48,4 +53,23 @@ public class MoneyMovementController {
                 moneyMovementService.getTransaction(transactionId)
         );
     }
+
+    @GetMapping("/{transactionId}/ledger")
+public ResponseEntity<LedgerSettlement> getLedgerSettlement(
+        @PathVariable UUID transactionId) {
+
+    try {
+        LedgerSettlement settlement =
+                settlementLedgerService.getSettlement(
+                        transactionId.toString());
+
+        return ResponseEntity.ok(settlement);
+
+    } catch (Exception exception) {
+        throw new IllegalArgumentException(
+                "Unable to retrieve blockchain settlement: "
+                        + transactionId,
+                exception);
+    }
+}
 }

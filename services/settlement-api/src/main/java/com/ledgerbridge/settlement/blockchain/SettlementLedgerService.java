@@ -48,8 +48,7 @@ public class SettlementLedgerService {
         ).send();
     }
 
-    public Tuple6<String, String, String, BigInteger, String, BigInteger>
-    getSettlement(String transactionId) throws Exception {
+    public LedgerSettlement getSettlement(String transactionId) throws Exception {
 
         Credentials credentials = getCredentials();
 
@@ -60,7 +59,17 @@ public class SettlementLedgerService {
                         new DefaultGasProvider()
         );
 
-        return contract.getSettlement(transactionId).send();
+        Tuple6<String, String, String, BigInteger, String, BigInteger> result =
+        contract.getSettlement(transactionId).send();
+
+        return new LedgerSettlement(
+            result.component1(),
+            result.component2(),
+            result.component3(),
+            result.component4(),
+            result.component5(),
+            result.component6()
+        );
     }
 
     private Credentials getCredentials() {
