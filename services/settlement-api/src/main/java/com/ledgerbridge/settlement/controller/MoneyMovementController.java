@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/money-movements")
@@ -37,5 +38,14 @@ public class MoneyMovementController {
         return ResponseEntity
                 .created(location)
                 .body(transaction);
+    }
+
+    @GetMapping("/{transactionId}")
+    public ResponseEntity<MoneyMovementTransaction> getMoneyMovement(
+                @PathVariable UUID transactionId) {
+
+        return ResponseEntity.ok(
+                moneyMovementService.getTransaction(transactionId)
+        );
     }
 }

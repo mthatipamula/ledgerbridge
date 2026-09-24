@@ -87,4 +87,12 @@ public class MoneyMovementService {
                     exception);
         }
     }
+
+    public MoneyMovementTransaction getTransaction(UUID transactionId) {
+        return transactionRepository
+                .findById(transactionId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Money movement transaction not found: " + transactionId));
+    }
 }
