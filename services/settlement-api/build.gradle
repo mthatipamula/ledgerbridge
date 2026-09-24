@@ -23,6 +23,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    implementation 'org.web3j:core:4.14.0'
 }
 
 tasks.named('test') {
