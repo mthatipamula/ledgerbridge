@@ -10,6 +10,7 @@ services:
       - PERSISTENCE=0
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./localstack/init/ready.d:/etc/localstack/init/ready.d"
 
   postgres:
     image: postgres:16-alpine

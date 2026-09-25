@@ -65,6 +65,29 @@ public class SettlementEventWorker {
                             message.body(),
                             SettlementRequestedEvent.class);
 
+            MoneyMovementTransaction transaction =
+                transactionRepository
+                        .findById(event.transactionId())
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Transaction not found: "
+                                                + event.transactionId()));
+
+           if (transaction.getStatus() ==
+                MoneyMovementTransaction.TransactionStatus.CONFIRMED) {
+
+                deleteMessage(message);
+
+                System.out.println(
+                        "Settlement already confirmed, skipping duplicate message: "
+                                + event.transactionId());
+
+                return;
+            }
+
+            transaction.markProcessing();
+            transactionRepository.save(transaction);
+
             TransactionReceipt receipt =
                     settlementLedgerService.recordSettlement(
                             event.transactionId().toString(),
@@ -73,24 +96,19 @@ public class SettlementEventWorker {
                             event.amount().movePointRight(2).toBigIntegerExact(),
                             event.currency());
 
-            MoneyMovementTransaction transaction =
-                    transactionRepository
-                            .findById(event.transactionId())
-                            .orElseThrow(() ->
-                                    new IllegalStateException(
-                                            "Transaction not found: "
-                                                    + event.transactionId()));
-
             transaction.markConfirmed(receipt.getTransactionHash());
             transactionRepository.save(transaction);
 
             deleteMessage(message);
 
         } catch (Exception exception) {
-            // Leave the message in SQS so it can be retried.
+            // Do not delete the message.
+            // SQS will make it visible again and retry processing.
             System.err.println(
-                    "Settlement processing failed: "
-                            + exception.getMessage());
+                "Settlement processing failed for message "
+                + message.messageId()
+                + ". Message will be retried by SQS. Error: "
+                + exception.getMessage());
         }
     }
 
