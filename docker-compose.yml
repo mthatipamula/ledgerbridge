@@ -1,0 +1,12 @@
+services:
+  localstack:
+    image: localstack/localstack:3.8
+    container_name: ledgerbridge-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sqs
+      - DEBUG=0
+      - PERSISTENCE=0
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
