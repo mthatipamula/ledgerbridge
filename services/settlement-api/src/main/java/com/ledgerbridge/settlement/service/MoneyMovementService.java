@@ -1,27 +1,27 @@
 package com.ledgerbridge.settlement.service;
 
-import com.ledgerbridge.settlement.blockchain.SettlementLedgerService;
 import com.ledgerbridge.settlement.domain.MoneyMovementTransaction;
+import com.ledgerbridge.settlement.messaging.SettlementEventPublisher;
 import com.ledgerbridge.settlement.repository.MoneyMovementTransactionRepository;
 import org.springframework.stereotype.Service;
-import org.web3j.protocol.core.methods.response.TransactionReceipt;
+
+import com.ledgerbridge.settlement.event.SettlementRequestedEvent;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.UUID;
 
 @Service
 public class MoneyMovementService {
 
     private final MoneyMovementTransactionRepository transactionRepository;
-    private final SettlementLedgerService settlementLedgerService;
-
+    private final SettlementEventPublisher settlementEventPublisher;
+    
     public MoneyMovementService(
-            MoneyMovementTransactionRepository transactionRepository,
-            SettlementLedgerService settlementLedgerService) {
+                MoneyMovementTransactionRepository transactionRepository,
+                SettlementEventPublisher settlementEventPublisher) {
 
         this.transactionRepository = transactionRepository;
-        this.settlementLedgerService = settlementLedgerService;
+        this.settlementEventPublisher = settlementEventPublisher;
     }
 
     public MoneyMovementTransaction createTransaction(
@@ -63,19 +63,16 @@ public class MoneyMovementService {
         transactionRepository.save(transaction);
 
         try {
-            TransactionReceipt receipt =
-                    settlementLedgerService.recordSettlement(
-                            transaction.getId().toString(),
-                            sourceAccountId,
-                            destinationAccountId,
-                            amount.movePointRight(2).toBigIntegerExact(),
-                            currency
-                    );
+                SettlementRequestedEvent event = new SettlementRequestedEvent(
+                        transaction.getId(),
+                        sourceAccountId,
+                        destinationAccountId,
+                        amount,
+                        currency);
 
-            transaction.markConfirmed(
-                    receipt.getTransactionHash());
+                settlementEventPublisher.publish(event);
 
-            return transactionRepository.save(transaction);
+                return transactionRepository.save(transaction);
 
         } catch (Exception exception) {
 
