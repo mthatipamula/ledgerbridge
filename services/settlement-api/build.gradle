@@ -27,6 +27,9 @@ dependencies {
     
     implementation 'software.amazon.awssdk:sqs:2.37.5'
 
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    runtimeOnly 'org.postgresql:postgresql'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 

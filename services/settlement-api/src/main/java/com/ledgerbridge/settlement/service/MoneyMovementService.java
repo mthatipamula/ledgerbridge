@@ -72,7 +72,7 @@ public class MoneyMovementService {
 
                 settlementEventPublisher.publish(event);
 
-                return transactionRepository.save(transaction);
+                return transaction;
 
         } catch (Exception exception) {
 
@@ -80,7 +80,7 @@ public class MoneyMovementService {
             transactionRepository.save(transaction);
 
             throw new IllegalStateException(
-                    "Blockchain settlement failed",
+                    "Unable to publish settlement event",
                     exception);
         }
     }
