@@ -1,0 +1,23 @@
+services:
+  localstack:
+    image: localstack/localstack:3.8
+    container_name: ledgerbridge-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sqs
+      - DEBUG=0
+      - PERSISTENCE=0
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./localstack/init/ready.d:/etc/localstack/init/ready.d"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: ledgerbridge-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ledgerbridge
+      POSTGRES_USER: ledgerbridge
+      POSTGRES_PASSWORD: ledgerbridge

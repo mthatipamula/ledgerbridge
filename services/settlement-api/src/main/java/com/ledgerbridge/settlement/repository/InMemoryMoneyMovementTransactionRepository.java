@@ -3,12 +3,18 @@ package com.ledgerbridge.settlement.repository;
 import com.ledgerbridge.settlement.domain.MoneyMovementTransaction;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Repository
+@ConditionalOnProperty(
+        name = "ledgerbridge.repository.type",
+        havingValue = "in-memory",
+        matchIfMissing = true)
 public class InMemoryMoneyMovementTransactionRepository
         implements MoneyMovementTransactionRepository {
 

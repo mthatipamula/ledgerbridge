@@ -1,7 +1,20 @@
 server:
   port: 8080
 
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ledgerbridge
+    username: ledgerbridge
+    password: ledgerbridge
+
+  sql:
+    init:
+      mode: always
+
 ledgerbridge:
   blockchain:
     rpc-url: http://localhost:8545
     settlement-contract-address: "0xbca0fdc68d9b21b5bfb16d784389807017b2bbbc"
+  
+  repository:
+    type: postgres
