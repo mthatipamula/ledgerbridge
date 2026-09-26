@@ -6,12 +6,6 @@ LedgerBridge is an educational portfolio project that simulates institutional mo
 
 It demonstrates how a financial transaction can move from an API request through persistent transaction state, asynchronous settlement processing, a private Ethereum-compatible blockchain, reconciliation, and an AI-assisted operations layer exposed through the Model Context Protocol (MCP).
 
-> **Portfolio / educational project**
->
-> LedgerBridge does not connect to real banks, JPMorgan, Hamsa/HAMCSA, production payment networks, customer accounts, or production financial infrastructure. All accounts, transactions, blockchain data, and infrastructure are local/demo resources.
-
----
-
 ## Why I Built LedgerBridge
 
 The project demonstrates practical engineering skills relevant to fintech, payments, blockchain infrastructure, distributed systems, and AI-enabled engineering:
