@@ -66,9 +66,9 @@ public class SettlementLedgerService {
             result.component1(),
             result.component2(),
             result.component3(),
-            result.component4(),
+            result.component4().longValueExact(),
             result.component5(),
-            result.component6()
+            result.component6().longValueExact()
         );
     }
 

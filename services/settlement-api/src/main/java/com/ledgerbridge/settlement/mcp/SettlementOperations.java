@@ -38,13 +38,22 @@ public class SettlementOperations {
     }
 
     @Tool(description = "Retrieve the blockchain settlement associated with a money movement transaction")
-    public LedgerSettlement getTransactionLedger(UUID transactionId) {
-
+    public TransactionLedgerResponse getTransactionLedger(UUID transactionId) {
         getTransaction(transactionId);
 
         try {
-            return settlementLedgerService.getSettlement(
-                    transactionId.toString());
+            LedgerSettlement settlement =
+                    settlementLedgerService.getSettlement(
+                            transactionId.toString());
+
+            return new TransactionLedgerResponse(
+                    settlement.transactionId(),
+                    settlement.sourceAccount(),
+                    settlement.destinationAccount(),
+                    settlement.formattedAmount(),
+                    settlement.currency(),
+                    settlement.timestamp()
+            );
 
         } catch (Exception exception) {
             throw new IllegalStateException(
@@ -59,5 +68,14 @@ public class SettlementOperations {
             UUID transactionId) {
 
         return reconciliationService.reconcile(transactionId);
+    }
+
+    public record TransactionLedgerResponse(
+        String transactionId,
+        String sourceAccount,
+        String destinationAccount,
+        String amount,
+        String currency,
+        long timestamp) {
     }
 }

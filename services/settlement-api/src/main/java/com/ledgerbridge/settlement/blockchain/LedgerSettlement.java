@@ -1,12 +1,14 @@
 package com.ledgerbridge.settlement.blockchain;
 
-import java.math.BigInteger;
-
 public record LedgerSettlement(
         String transactionId,
         String sourceAccount,
         String destinationAccount,
-        BigInteger amount,
+        long amount,
         String currency,
-        BigInteger timestamp) {
+        long timestamp) {
+
+    public String formattedAmount() {
+        return String.format("%.2f %s", amount / 100.0, currency);
+    }
 }
