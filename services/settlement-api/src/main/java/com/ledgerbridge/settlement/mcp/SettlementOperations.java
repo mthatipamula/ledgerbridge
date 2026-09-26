@@ -1,5 +1,6 @@
 package com.ledgerbridge.settlement.mcp;
 
+import org.springframework.ai.tool.annotation.Tool;
 import com.ledgerbridge.settlement.blockchain.LedgerSettlement;
 import com.ledgerbridge.settlement.blockchain.SettlementLedgerService;
 import com.ledgerbridge.settlement.domain.MoneyMovementTransaction;
@@ -27,6 +28,7 @@ public class SettlementOperations {
         this.reconciliationService = reconciliationService;
     }
 
+    @Tool(description = "Retrieve a money movement transaction by transaction ID")
     public MoneyMovementTransaction getTransaction(UUID transactionId) {
 
         return transactionRepository.findById(transactionId)
@@ -35,6 +37,7 @@ public class SettlementOperations {
                                 "Transaction not found: " + transactionId));
     }
 
+    @Tool(description = "Retrieve the blockchain settlement associated with a money movement transaction")
     public LedgerSettlement getTransactionLedger(UUID transactionId) {
 
         getTransaction(transactionId);
@@ -51,6 +54,7 @@ public class SettlementOperations {
         }
     }
 
+    @Tool(description = "Reconcile a database transaction against its blockchain settlement")
     public ReconciliationResult reconcileTransaction(
             UUID transactionId) {
 
