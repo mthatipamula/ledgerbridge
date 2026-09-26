@@ -11,6 +11,22 @@ spring:
     init:
       mode: always
 
+  ai:
+    mcp:
+      server:
+        protocol: STREAMABLE
+
+      client:
+        enabled: false
+        name: ledgerbridge-mcp-client
+        version: 1.0.0
+        type: SYNC
+        streamable-http:
+          connections:
+            ledgerbridge-server:
+              url: http://localhost:8080
+              endpoint: /mcp
+
 ledgerbridge:
   blockchain:
     rpc-url: http://localhost:8545

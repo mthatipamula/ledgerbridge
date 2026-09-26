@@ -22,6 +22,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
+    implementation 'org.springframework.ai:spring-ai-starter-mcp-server-webmvc'
+    implementation 'org.springframework.ai:spring-ai-starter-mcp-client'
+    implementation platform('org.springframework.ai:spring-ai-bom:1.1.8')
+
     implementation 'org.web3j:core:4.14.0'
     implementation 'org.web3j:codegen:4.14.0'
     
