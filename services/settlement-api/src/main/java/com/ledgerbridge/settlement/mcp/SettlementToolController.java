@@ -1,6 +1,5 @@
 package com.ledgerbridge.settlement.mcp;
 
-import com.ledgerbridge.settlement.blockchain.LedgerSettlement;
 import com.ledgerbridge.settlement.domain.MoneyMovementTransaction;
 import com.ledgerbridge.settlement.reconciliation.ReconciliationResult;
 import org.springframework.web.bind.annotation.*;
@@ -26,7 +25,7 @@ public class SettlementToolController {
     }
 
     @GetMapping("/get_transaction_ledger/{transactionId}")
-    public LedgerSettlement getTransactionLedger(
+    public SettlementOperations.TransactionLedgerResponse getTransactionLedger(
             @PathVariable UUID transactionId) {
 
         return settlementOperations.getTransactionLedger(transactionId);

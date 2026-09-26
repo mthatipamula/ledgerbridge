@@ -11,3 +11,13 @@ spring:
             ledgerbridge-server:
               url: http://localhost:8080
               endpoint: /mcp
+
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: qwen2.5:7b
+          temperature: 0.1
+
+server:
+  port: 8082
