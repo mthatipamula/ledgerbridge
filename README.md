@@ -255,6 +255,13 @@ curl http://localhost:8080/actuator/health
 
 ---
 
+## 5b. Deploy the SettlementLedger Smart Contract
+
+cd services/settlement-api
+./gradlew runSettlementLedgerDeployer
+
+---
+
 ## 6. Create a Money Movement
 
 Use the API rather than inserting directly into PostgreSQL:

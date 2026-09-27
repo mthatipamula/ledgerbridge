@@ -3,6 +3,8 @@ package com.ledgerbridge.settlement.messaging;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ledgerbridge.settlement.event.SettlementRequestedEvent;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
@@ -10,9 +12,8 @@ import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 @Component
 public class SettlementEventPublisher {
 
-    private static final String QUEUE_URL =
-            "http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/settlement-requests";
-
+    @Value("${ledgerbridge.sqs.settlement-queue-url}")
+    private String queueUrl;
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
 
@@ -31,7 +32,7 @@ public class SettlementEventPublisher {
 
             SendMessageRequest request =
                     SendMessageRequest.builder()
-                            .queueUrl(QUEUE_URL)
+                            .queueUrl(queueUrl)
                             .messageBody(messageBody)
                             .build();
 
