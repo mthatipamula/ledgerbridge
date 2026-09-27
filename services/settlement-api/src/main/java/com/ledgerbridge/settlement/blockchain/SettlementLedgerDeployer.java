@@ -1,6 +1,9 @@
 package com.ledgerbridge.settlement.blockchain;
 
 import com.ledgerbridge.settlement.blockchain.generated.SettlementLedger;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.Environment;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.http.HttpService;
@@ -12,12 +15,22 @@ import java.math.BigInteger;
 
 public class SettlementLedgerDeployer {
 
-    private static final String BESU_RPC_URL = "http://localhost:8545";
-
-    private static final String CONTRACT_ADDRESS =
-            "0xbca0fdc68d9b21b5bfb16d784389807017b2bbbc";
-
     public static void main(String[] args) throws Exception {
+
+        ConfigurableApplicationContext context =
+                SpringApplication.run(
+                        com.ledgerbridge.settlement.SettlementApiApplication.class,
+                        args);
+
+        Environment environment = context.getEnvironment();
+
+        String rpcUrl =
+                environment.getRequiredProperty(
+                        "ledgerbridge.blockchain.rpc-url");
+
+        String contractAddress =
+                environment.getRequiredProperty(
+                        "ledgerbridge.blockchain.settlement-contract-address");
 
         String privateKey =
                 System.getenv("LEDGERBRIDGE_DEPLOYER_PRIVATE_KEY");
@@ -28,7 +41,7 @@ public class SettlementLedgerDeployer {
         }
 
         Web3j web3j =
-                Web3j.build(new HttpService(BESU_RPC_URL));
+                Web3j.build(new HttpService(rpcUrl));
 
         try {
             Credentials credentials =
@@ -38,11 +51,11 @@ public class SettlementLedgerDeployer {
             System.out.println(
                     "Deployer address: " + credentials.getAddress());
             System.out.println(
-                    "Contract address: " + CONTRACT_ADDRESS);
+                    "Contract address: " + contractAddress);
 
             SettlementLedger contract =
                     SettlementLedger.load(
-                            CONTRACT_ADDRESS,
+                            contractAddress,
                             web3j,
                             credentials,
                             new DefaultGasProvider()
@@ -81,6 +94,7 @@ public class SettlementLedgerDeployer {
 
         } finally {
             web3j.shutdown();
+            context.close();
         }
     }
 }

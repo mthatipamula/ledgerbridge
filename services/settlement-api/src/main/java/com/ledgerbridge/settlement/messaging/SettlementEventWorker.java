@@ -5,6 +5,8 @@ import com.ledgerbridge.settlement.domain.MoneyMovementTransaction;
 import com.ledgerbridge.settlement.event.SettlementRequestedEvent;
 import com.ledgerbridge.settlement.blockchain.SettlementLedgerService;
 import com.ledgerbridge.settlement.repository.MoneyMovementTransactionRepository;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
@@ -19,9 +21,7 @@ import java.util.List;
 @Component
 public class SettlementEventWorker {
 
-    private static final String QUEUE_URL =
-            "http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/settlement-requests";
-
+    private final String queueUrl;    
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
     private final SettlementLedgerService settlementLedgerService;
@@ -31,12 +31,14 @@ public class SettlementEventWorker {
             SqsClient sqsClient,
             ObjectMapper objectMapper,
             SettlementLedgerService settlementLedgerService,
-            MoneyMovementTransactionRepository transactionRepository) {
+            MoneyMovementTransactionRepository transactionRepository,
+            @Value("${ledgerbridge.sqs.settlement-queue-url}") String queueUrl) {
 
         this.sqsClient = sqsClient;
         this.objectMapper = objectMapper;
         this.settlementLedgerService = settlementLedgerService;
         this.transactionRepository = transactionRepository;
+        this.queueUrl = queueUrl;
     }
 
     @Scheduled(fixedDelay = 2000)
@@ -44,7 +46,7 @@ public class SettlementEventWorker {
 
         ReceiveMessageRequest request =
                 ReceiveMessageRequest.builder()
-                        .queueUrl(QUEUE_URL)
+                        .queueUrl(queueUrl)
                         .maxNumberOfMessages(10)
                         .waitTimeSeconds(1)
                         .build();
@@ -116,7 +118,7 @@ public class SettlementEventWorker {
 
         sqsClient.deleteMessage(
                 DeleteMessageRequest.builder()
-                        .queueUrl(QUEUE_URL)
+                        .queueUrl(queueUrl)
                         .receiptHandle(message.receiptHandle())
                         .build());
     }
