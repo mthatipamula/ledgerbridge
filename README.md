@@ -2,814 +2,363 @@
 
 ## AI-Augmented Blockchain Money Movement & Settlement Platform
 
-LedgerBridge is an educational portfolio project that simulates institutional money movement and blockchain settlement using a modern, event-driven architecture.
+LedgerBridge is an educational portfolio project that simulates institutional money movement and blockchain settlement using Java, Spring Boot, PostgreSQL, Amazon SQS-compatible messaging, Hyperledger Besu, Solidity, MCP, and a local LLM.
 
-It demonstrates how a financial transaction can move from an API request through persistent transaction state, asynchronous settlement processing, a private Ethereum-compatible blockchain, reconciliation, and an AI-assisted operations layer exposed through the Model Context Protocol (MCP).
+> **Educational / portfolio project only.** LedgerBridge does not connect to real banks, JPMorgan, Hamsa, production payment rails, customer funds, or production financial infrastructure.
 
-## Why I Built LedgerBridge
+## Local Development
 
-The project demonstrates practical engineering skills relevant to fintech, payments, blockchain infrastructure, distributed systems, and AI-enabled engineering:
+### Prerequisites
 
-- Java and Spring Boot backend development
-- REST API design
-- PostgreSQL persistence
-- Idempotent money-movement APIs
-- Asynchronous event-driven processing
-- Amazon SQS-compatible messaging using LocalStack
-- Retry and dead-letter queue behavior
-- Blockchain integration using Web3j
-- Hyperledger Besu private blockchain
-- Solidity smart-contract development
-- Database-to-blockchain reconciliation
-- MCP server and tool design
-- Spring AI integration
-- Local LLM integration with Ollama and Qwen 2.5
-- AI tool calling against live application data
-- CI with GitHub Actions
-- Separation of synchronous APIs, asynchronous workers, blockchain infrastructure, and AI operations
+Install:
 
----
-
-# Architecture
-
-```text
-                         ┌─────────────────────────┐
-                         │       User / Client      │
-                         └────────────┬────────────┘
-                                      │
-                                      ▼
-                         ┌─────────────────────────┐
-                         │   Settlement API        │
-                         │   Spring Boot / Java    │
-                         └────────────┬────────────┘
-                                      │
-                         ┌────────────┴────────────┐
-                         │                         │
-                         ▼                         ▼
-                ┌──────────────────┐      ┌──────────────────┐
-                │   PostgreSQL     │      │  SQS / LocalStack│
-                │ Transaction State│      │ Settlement Events │
-                └──────────────────┘      └─────────┬────────┘
-                                                     │
-                                                     ▼
-                                            ┌──────────────────┐
-                                            │ Settlement Worker │
-                                            │   Spring / SQS    │
-                                            └─────────┬────────┘
-                                                      │
-                                                      ▼
-                                            ┌──────────────────┐
-                                            │ Hyperledger Besu  │
-                                            │ Private EVM Chain │
-                                            └─────────┬────────┘
-                                                      │
-                                                      ▼
-                                            ┌──────────────────┐
-                                            │ SettlementLedger  │
-                                            │ Solidity Contract │
-                                            └──────────────────┘
-
-                 ┌─────────────────────────────────────────────┐
-                 │           AI / MCP Operations Layer         │
-                 │                                             │
-                 │  Qwen 2.5 7B ← Spring AI ← MCP Client     │
-                 │                         │                   │
-                 │                         ▼                   │
-                 │                 LedgerBridge MCP Server     │
-                 │                         │                   │
-                 │              ┌──────────┼──────────┐        │
-                 │              ▼          ▼          ▼        │
-                 │        getTransaction  getLedger  reconcile │
-                 └─────────────────────────────────────────────┘
-```
-
----
-
-# Transaction Lifecycle
-
-```text
-POST /api/v1/money-movements
-             │
-             ▼
-      Validate request
-             │
-             ▼
-   Check idempotency key
-             │
-             ▼
-   Persist transaction
-        status=PENDING
-             │
-             ▼
-      Publish event
-             │
-             ▼
-      SQS settlement queue
-             │
-             ▼
-     Settlement worker
-             │
-             ▼
-       status=PROCESSING
-             │
-             ▼
-    Submit to Besu contract
-             │
-             ▼
-      Blockchain confirms
-             │
-             ▼
-       status=CONFIRMED
-             │
-             ▼
-      Store transaction hash
-             │
-             ▼
-     Reconciliation available
-```
-
-The asynchronous API flow separates request handling from blockchain confirmation.
-
----
-
-# Implemented Components
-
-## 1. Settlement API
-
-Technology:
-
+- Docker Desktop / Docker Compose v2
 - Java 25
-- Spring Boot 3.5.6
-- Gradle 9.7.1
-- Spring Web
-- Spring Validation
-- Spring Actuator
+- Node.js / npm
+- Gradle
+- Ollama
 
-The settlement API accepts money-movement requests and manages the transaction lifecycle.
+Verify:
 
-A transaction contains:
+```bash
+docker --version
+docker compose version
+java --version
+node --version
+npm --version
+gradle --version
+ollama --version
+```
 
-- Transaction ID
-- Idempotency key
-- Source account
-- Destination account
-- Amount
-- Currency
-- Status
-- Blockchain transaction hash
-- Created timestamp
-- Updated timestamp
+`services/settlement-api` includes a Gradle wrapper. `services/mcp-client` is a standalone Gradle project and currently uses the locally installed `gradle` command.
 
-Example:
+---
 
-```json
-{
-  "id": "9c079d7b-38ef-4fc8-82cc-1e520c3892a7",
-  "idempotencyKey": "postgres-demo-001",
-  "sourceAccountId": "BANK-A-001",
-  "destinationAccountId": "BANK-B-002",
-  "amount": 125.5000,
-  "currency": "USD",
-  "status": "CONFIRMED",
-  "blockchainTransactionHash": "0xb559f2933bbe3c85f4156b74a0606edca9c99a9ceb70a9507e4a036731c2c4f1"
-}
+## 1. Clone
+
+```bash
+git clone https://github.com/mthatipamula/ledgerbridge.git
+cd ledgerbridge
 ```
 
 ---
 
-# 2. PostgreSQL Persistence
+## 2. Start PostgreSQL and LocalStack
 
-LedgerBridge supports PostgreSQL persistence.
+The repository's `docker-compose.yml` starts PostgreSQL 16 and LocalStack SQS.
 
-```text
-PostgreSQL
-    │
-    └── money_movement_transactions
+Start both:
+
+```bash
+docker compose up -d postgres localstack
 ```
 
-The transaction table includes:
+Or start the complete Compose stack:
 
-```text
-id
-idempotency_key
-source_account_id
-destination_account_id
-amount
-currency
-status
-blockchain_tx_hash
-created_at
-updated_at
+```bash
+docker compose up -d
 ```
 
-Indexes are maintained for transaction status and creation time.
+Check:
 
-The repository abstraction also supports an in-memory implementation for simple demonstrations.
-
----
-
-# 3. Idempotency
-
-Money movement APIs must protect against duplicate requests.
-
-LedgerBridge uses an idempotency key with a database uniqueness constraint.
-
-```text
-Request
-   │
-   ▼
-Idempotency Key
-   │
-   ├── New key ──► Create transaction
-   │
-   └── Existing key ──► Return existing transaction
+```bash
+docker ps
 ```
 
-The database enforces uniqueness on `idempotency_key`.
+PostgreSQL:
 
----
+```text
+Database: ledgerbridge
+User: ledgerbridge
+Password: ledgerbridge
+Host: localhost
+Port: 5432
+```
 
-# 4. Asynchronous Settlement Processing
+Check PostgreSQL:
 
-LedgerBridge uses asynchronous settlement processing.
+```bash
+docker exec -it ledgerbridge-postgres pg_isready -U ledgerbridge -d ledgerbridge
+```
 
-Technology:
+Connect:
 
-- Amazon SQS-compatible messaging
-- LocalStack
-- Spring-based settlement worker
-- Settlement event payloads
+```bash
+docker exec -it ledgerbridge-postgres psql -U ledgerbridge -d ledgerbridge
+```
 
-Queue:
+Then:
+
+```sql
+\dt
+\q
+```
+
+The Spring Boot application initializes the application schema on startup.
+
+### LocalStack / SQS
+
+The LocalStack initialization script creates:
 
 ```text
 settlement-requests
-```
-
-Dead-letter queue:
-
-```text
 settlement-dlq
 ```
 
-The API persists the transaction and publishes a settlement event. The worker consumes the event and performs blockchain settlement.
+Check queues:
 
-This demonstrates separation between:
-
-- API request handling
-- transaction persistence
-- event delivery
-- settlement processing
-- blockchain confirmation
-
----
-
-# 5. Retry and Dead-Letter Queue
-
-The SQS flow includes retry behavior and a dead-letter queue.
-
-```text
-Settlement Queue
-      │
-      ▼
-  Worker attempt
-      │
-      ├── Success ───────► Delete message
-      │
-      └── Failure
-             │
-             ▼
-       Message remains
-             │
-             ▼
-      Visibility timeout
-             │
-             ▼
-       Retry delivery
-             │
-             ▼
-       Retry limit
-             │
-             ▼
-      Settlement DLQ
+```bash
+docker exec -it ledgerbridge-localstack awslocal sqs list-queues
 ```
 
-A message is acknowledged only after the settlement operation succeeds.
-
-This demonstrates at-least-once messaging behavior and failure recovery.
-
----
-
-# 6. Worker Idempotency
-
-The settlement worker protects against duplicate message delivery.
-
-If a transaction is already `CONFIRMED`, the worker skips duplicate settlement processing rather than submitting another blockchain transaction.
+LocalStack endpoint:
 
 ```text
-Message 1 ──► Settlement ──► CONFIRMED
-Message 1 redelivered
-             │
-             ▼
-        Already CONFIRMED
-             │
-             ▼
-        Skip duplicate
+http://localhost:4566
 ```
 
 ---
 
-# 7. Hyperledger Besu
+## 3. Create the Hyperledger Besu Development Network
 
-LedgerBridge uses a local Hyperledger Besu private network.
+LedgerBridge uses a local Hyperledger Besu development network generated by the Besu Developer Quickstart.
 
-The development network provides:
+From the LedgerBridge repository root:
 
-- Ethereum-compatible JSON-RPC
-- WebSocket access
-- Multiple validators
-- RPC node
-- Prometheus
-- Grafana
-- Chainlens
-- Loki / Alloy observability components
+```bash
+npx @consensys-software/besu-dev-quickstart
+```
 
-Local endpoints used during development include:
+When prompted for the output directory, enter:
+
+```text
+./besu-test-network
+```
+
+The quickstart creates the directory and generates the Docker Compose files, node configuration, accounts, keys, genesis configuration, and supporting development artifacts.
+
+Expected local structure:
+
+```text
+ledgerbridge/
+├── besu-test-network/
+├── blockchain/
+├── services/
+└── ...
+```
+
+**Do not manually create `besu-test-network` first if the quickstart expects a new directory.**
+
+Start Besu:
+
+```bash
+cd besu-test-network
+./run.sh
+```
+
+Return to the repository:
+
+```bash
+cd ..
+```
+
+Verify:
+
+```bash
+docker ps
+```
+
+LedgerBridge expects:
 
 ```text
 JSON-RPC:  http://localhost:8545
 WebSocket: ws://localhost:8546
-Grafana:   http://localhost:3000
-Chainlens: http://localhost:8081
 ```
 
-The Java application communicates with Besu through Web3j.
+Test JSON-RPC:
 
----
-
-# 8. Solidity SettlementLedger Contract
-
-LedgerBridge contains a Solidity `SettlementLedger` contract.
-
-The contract stores:
-
-- Transaction ID
-- Source account
-- Destination account
-- Amount
-- Currency
-- Blockchain timestamp
-
-It prevents duplicate settlement records for the same transaction ID.
-
-Core operations:
-
-```text
-recordSettlement(...)
-getSettlement(transactionId)
+```bash
+curl -s http://localhost:8545   -H "Content-Type: application/json"   --data '{
+    "jsonrpc":"2.0",
+    "method":"eth_blockNumber",
+    "params":[],
+    "id":1
+  }'
 ```
 
-The contract validates required fields and rejects duplicate transaction IDs.
+Stop Besu:
 
----
-
-# 9. Real Blockchain Settlement Demonstration
-
-LedgerBridge has been exercised against the local Besu network.
-
-Example transaction:
-
-```text
-Transaction ID:
-9c079d7b-38ef-4fc8-82cc-1e520c3892a7
-
-Source:
-BANK-A-001
-
-Destination:
-BANK-B-002
-
-Amount:
-125.50 USD
-
-Database status:
-CONFIRMED
-
-Blockchain transaction:
-0xb559f2933bbe3c85f4156b74a0606edca9c99a9ceb70a9507e4a036731c2c4f1
-```
-
-The corresponding settlement was successfully retrieved from the deployed Solidity contract.
-
-The contract stores monetary amounts as integer values. Therefore `125.50 USD` is represented on-chain as `12550` using two decimal places.
-
----
-
-# 10. Database-to-Blockchain Reconciliation
-
-LedgerBridge includes a reconciliation service.
-
-Endpoint:
-
-```text
-GET /api/v1/reconciliation/{transactionId}
-```
-
-The service compares the application-side transaction against the blockchain settlement.
-
-It verifies:
-
-- Transaction ID
-- Source account
-- Destination account
-- Amount
-- Currency
-- Settlement status
-
-Example:
-
-```json
-{
-  "transactionId": "9c079d7b-38ef-4fc8-82cc-1e520c3892a7",
-  "databaseStatus": "CONFIRMED",
-  "blockchainStatus": "CONFIRMED",
-  "matched": true,
-  "message": "Database transaction matches blockchain settlement"
-}
-```
-
-This creates a control point between off-chain application state and on-chain settlement state.
-
----
-
-# 11. MCP Server
-
-LedgerBridge exposes settlement operations through the Model Context Protocol.
-
-Technology:
-
-- Spring AI
-- Spring AI MCP Server
-- Streamable HTTP MCP transport
-
-MCP endpoint:
-
-```text
-http://localhost:8080/mcp
-```
-
-Three operational tools are exposed:
-
-### `getTransaction`
-
-Retrieves the database transaction by transaction ID.
-
-### `getTransactionLedger`
-
-Retrieves the corresponding blockchain settlement.
-
-### `reconcileTransaction`
-
-Compares database state against blockchain state.
-
-MCP provides a controlled interface between AI clients and application capabilities.
-
----
-
-# 12. MCP Tool Discovery and Invocation
-
-The standalone MCP client successfully connects to the LedgerBridge MCP server and discovers:
-
-```text
-Tool: reconcileTransaction
-Tool: getTransactionLedger
-Tool: getTransaction
-```
-
-The client can invoke these tools directly.
-
-Example result:
-
-```text
-Transaction:
-9c079d7b-38ef-4fc8-82cc-1e520c3892a7
-
-Source:
-BANK-A-001
-
-Destination:
-BANK-B-002
-
-Amount:
-125.50 USD
-
-Status:
-CONFIRMED
+```bash
+cd besu-test-network
+./stop.sh
+cd ..
 ```
 
 ---
 
-# 13. AI Settlement Assistant
+## 4. Configure the Besu Deployer Key
 
-LedgerBridge adds an AI operations layer on top of MCP.
-
-Technology:
-
-- Spring AI 1.1.8
-- Spring AI ChatClient
-- Ollama
-- Qwen 2.5 7B
-- MCP tool callbacks
-
-The LLM does not directly access PostgreSQL or Besu.
-
-Instead:
-
-```text
-Qwen 2.5
-    │
-    ▼
-Spring AI ChatClient
-    │
-    ▼
-MCP Tool Callback
-    │
-    ▼
-LedgerBridge MCP Server
-    │
-    ├── PostgreSQL
-    ├── Besu
-    └── Reconciliation
-```
-
-This keeps the AI layer separated from the transaction infrastructure.
-
----
-
-# 14. AI Tool Calling
-
-Qwen 2.5 7B was selected because it supports tool calling.
-
-Example request:
-
-```text
-Use the getTransactionLedger tool for transaction
-9c079d7b-38ef-4fc8-82cc-1e520c3892a7.
-Do not answer from general knowledge.
-Return the blockchain settlement details from the tool.
-```
-
-The model invokes the MCP tool and receives actual blockchain data.
-
-Example tool result:
-
-```text
-Source Account: BANK-A-001
-Destination Account: BANK-B-002
-Amount: 12550 raw on-chain units
-Currency: USD
-Timestamp: 1790357446
-```
-
-The key point is that the LLM uses an application tool to obtain live transaction data rather than generating a transaction answer from general knowledge.
-
----
-
-# 15. Read-Only AI Operations
-
-The Settlement Assistant is intentionally read-only.
-
-The assistant is instructed:
-
-```text
-Never initiate, modify, approve, or authorize money movement.
-```
-
-The AI layer can:
-
-- Retrieve transaction information
-- Retrieve blockchain settlement information
-- Perform reconciliation
-- Explain returned results
-
-It does not:
-
-- Create money movements
-- Approve payments
-- Modify transaction state
-- Submit blockchain settlements
-- Authorize financial activity
-
----
-
-# 16. AI + MCP Architecture
-
-```text
-                         ┌─────────────────────┐
-                         │   User Question     │
-                         └──────────┬──────────┘
-                                    │
-                                    ▼
-                         ┌─────────────────────┐
-                         │    Qwen 2.5 7B     │
-                         │      via Ollama     │
-                         └──────────┬──────────┘
-                                    │
-                                    ▼
-                         ┌─────────────────────┐
-                         │ Spring AI ChatClient│
-                         └──────────┬──────────┘
-                                    │
-                                    ▼
-                         ┌─────────────────────┐
-                         │ MCP Tool Callbacks  │
-                         └──────────┬──────────┘
-                                    │
-                                    ▼
-                  ┌──────────────────────────────────┐
-                  │ LedgerBridge MCP Server          │
-                  │                                  │
-                  │ getTransaction                   │
-                  │ getTransactionLedger             │
-                  │ reconcileTransaction             │
-                  └───────────────┬──────────────────┘
-                                  │
-                    ┌─────────────┼─────────────┐
-                    ▼             ▼             ▼
-              PostgreSQL       Besu       Reconciliation
-```
-
----
-
-# 17. REST Operational Tool Endpoints
-
-In addition to MCP, equivalent REST operational endpoints are available:
-
-```text
-GET /api/v1/tools/get_transaction/{transactionId}
-
-GET /api/v1/tools/get_transaction_ledger/{transactionId}
-
-GET /api/v1/tools/reconcile_transaction/{transactionId}
-```
-
-This allows the capabilities to be demonstrated independently of an AI client.
-
----
-
-# 18. Configuration and Secrets
-
-Blockchain configuration is externalized.
-
-Example:
-
-```yaml
-ledgerbridge:
-  blockchain:
-    rpc-url: http://localhost:8545
-    settlement-contract-address: "..."
-```
-
-The blockchain deployer private key is supplied through an environment variable rather than committed to source control:
+The development network generates development accounts. LedgerBridge reads the deployer private key from:
 
 ```text
 LEDGERBRIDGE_DEPLOYER_PRIVATE_KEY
 ```
 
-No private key is stored in the repository.
+Set it without putting the key in source control:
+
+```bash
+export LEDGERBRIDGE_DEPLOYER_PRIVATE_KEY="$(cat besu-test-network/config/nodes/rpcnode/accountPrivateKey)"
+```
+
+Check only that it is configured:
+
+```bash
+test -n "$LEDGERBRIDGE_DEPLOYER_PRIVATE_KEY" && echo "Deployer key is configured"
+```
+
+Never print or commit the private key.
 
 ---
 
-# 19. CI / Build Automation
+## 5. Start Settlement API
 
-The repository includes GitHub Actions CI.
+The Settlement API runs on port `8080`.
 
-The workflow:
+```bash
+cd services/settlement-api
+```
 
-- Runs on pushes to `main`
-- Runs on pull requests targeting `main`
-- Uses Java 25
-- Executes the Gradle build
-
-Build command:
+Build:
 
 ```bash
 ./gradlew clean build
 ```
 
-This provides a repeatable build check for changes merged into the main branch.
+Run:
 
----
+```bash
+./gradlew bootRun
+```
 
-# Repository Structure
+Important endpoints:
 
 ```text
-ledgerbridge/
-│
-├── README.md
-├── docker-compose.yml
-├── .gitignore
-├── .github/
-│   └── workflows/
-│       └── ci.yml
-│
-├── localstack/
-│   └── init/
-│       └── ready.d/
-│           └── create-sqs.sh
-│
-└── services/
-    │
-    ├── settlement-api/
-    │   ├── build.gradle
-    │   ├── settings.gradle
-    │   ├── gradlew
-    │   └── src/
-    │       └── main/
-    │           ├── java/
-    │           │   └── com/ledgerbridge/settlement/
-    │           │       ├── controller/
-    │           │       ├── domain/
-    │           │       ├── repository/
-    │           │       ├── service/
-    │           │       ├── event/
-    │           │       ├── messaging/
-    │           │       ├── reconciliation/
-    │           │       ├── mcp/
-    │           │       └── blockchain/
-    │           │
-    │           └── resources/
-    │               ├── application.yml
-    │               └── schema.sql
-    │
-    └── mcp-client/
-        ├── build.gradle
-        └── src/
-            └── main/
-                ├── java/
-                │   └── com/ledgerbridge/mcpclient/
-                │       ├── McpClientApplication.java
-                │       └── SettlementAssistant.java
-                │
-                └── resources/
-                    └── application.yml
+API:  http://localhost:8080
+MCP:  http://localhost:8080/mcp
+```
+
+Health:
+
+```bash
+curl http://localhost:8080/actuator/health
 ```
 
 ---
 
-# Engineering Concepts Demonstrated
+## 6. Create a Money Movement
 
-## Distributed Systems
+Use the API rather than inserting directly into PostgreSQL:
 
-- Asynchronous processing
-- At-least-once message delivery
-- Idempotent consumers
-- Retry handling
-- Dead-letter queues
-- Event-driven processing
+```bash
+curl -X POST http://localhost:8080/api/v1/money-movements   -H "Content-Type: application/json"   -H "Idempotency-Key: payment-demo-002"   -d '{
+    "sourceAccountId": "BANK-A-001",
+    "destinationAccountId": "BANK-B-002",
+    "amount": 250.75,
+    "currency": "USD"
+  }'
+```
 
-## Financial Transaction Processing
-
-- Idempotency keys
-- Persistent transaction state
-- Explicit lifecycle states
-- Transaction audit data
-- Reconciliation
-
-## Blockchain
-
-- Private EVM network
-- Solidity smart contract
-- Blockchain transaction submission
-- On-chain settlement records
-- Transaction confirmation
-- Blockchain/application reconciliation
-
-## AI Engineering
-
-- Local LLM inference
-- Spring AI
-- Tool calling
-- MCP
-- AI access to application capabilities
-- Read-only operational assistant
-
-## Software Architecture
-
-- Separation of concerns
-- API / worker separation
-- Repository abstraction
-- Externalized configuration
-- Service boundaries
-- Incremental feature development
+Use a new idempotency key for each intentionally new payment.
 
 ---
 
-# What the AI Actually Knows
+## 7. Start Ollama / Qwen
 
-The AI assistant does not receive the entire database or blockchain.
+Start Ollama if necessary:
 
-Instead, it has access to explicitly exposed tools:
+```bash
+ollama serve
+```
+
+In another terminal:
+
+```bash
+ollama pull qwen2.5:7b
+```
+
+Verify:
+
+```bash
+ollama list
+```
+
+---
+
+## 8. Start MCP Client / AI Assistant
+
+The MCP client runs on port `8082`.
+
+```bash
+cd services/mcp-client
+```
+
+Build:
+
+```bash
+gradle clean build
+```
+
+Run:
+
+```bash
+gradle run
+```
+
+AI assistant endpoint:
+
+```text
+POST http://localhost:8082/api/v1/assistant/ask
+```
+
+Example:
+
+```bash
+curl -X POST http://localhost:8082/api/v1/assistant/ask   -H "Content-Type: application/json"   -d '{
+    "question": "What is the blockchain settlement status for transaction 9c079d7b-38ef-4fc8-82cc-1e520c3892a7?"
+  }'
+```
+
+The assistant is intentionally read-only. It can retrieve transactions, retrieve blockchain settlement information, reconcile state, and explain results. It cannot create, approve, modify, or authorize money movement.
+
+---
+
+## 9. Operational Endpoints
+
+Transaction:
+
+```bash
+curl http://localhost:8080/api/v1/tools/get_transaction/<TRANSACTION_ID>
+```
+
+Blockchain settlement:
+
+```bash
+curl http://localhost:8080/api/v1/tools/get_transaction_ledger/<TRANSACTION_ID>
+```
+
+Reconciliation:
+
+```bash
+curl http://localhost:8080/api/v1/reconciliation/<TRANSACTION_ID>
+```
+
+MCP server:
+
+```text
+http://localhost:8080/mcp
+```
+
+MCP tools:
 
 ```text
 getTransaction
@@ -817,291 +366,217 @@ getTransactionLedger
 reconcileTransaction
 ```
 
-For example:
+---
 
-```text
-User:
-"What is the blockchain settlement status for transaction X?"
+## 10. Recommended Startup Order
 
-        ↓
+### Terminal 1 — PostgreSQL + LocalStack
 
-LLM decides a tool is required
-
-        ↓
-
-getTransactionLedger(X)
-
-        ↓
-
-MCP Server
-
-        ↓
-
-SettlementLedgerService
-
-        ↓
-
-Besu smart contract
-
-        ↓
-
-Blockchain result
-
-        ↓
-
-LLM explains result
+```bash
+docker compose up -d postgres localstack
 ```
 
-This is the core AI architecture demonstrated by LedgerBridge.
+### Terminal 2 — Besu
+
+```bash
+cd besu-test-network
+./run.sh
+```
+
+### Terminal 3 — Settlement API
+
+```bash
+cd services/settlement-api
+./gradlew bootRun
+```
+
+### Terminal 4 — Ollama
+
+```bash
+ollama serve
+```
+
+If necessary:
+
+```bash
+ollama pull qwen2.5:7b
+```
+
+### Terminal 5 — MCP / AI Client
+
+```bash
+cd services/mcp-client
+gradle run
+```
 
 ---
 
-# Design Decisions
-
-## Why SQS / LocalStack?
-
-SQS provides a straightforward way to demonstrate asynchronous event processing, retries, visibility timeouts, and dead-letter queues without adding Kafka operational complexity.
-
-LocalStack allows the messaging architecture to be demonstrated locally.
-
-## Why Besu?
-
-Besu provides an Ethereum-compatible private blockchain suitable for demonstrating institutional-style settlement workflows without depending on a public blockchain.
-
-## Why PostgreSQL?
-
-PostgreSQL represents the application-side transaction state while the blockchain provides the on-chain settlement record.
-
-This creates a clear reconciliation boundary:
+## Architecture
 
 ```text
-Off-chain state
-      vs.
-On-chain state
+User
+ |
+ v
+Settlement API :8080
+ |
+ +------------------> PostgreSQL
+ |
+ +------------------> SQS / LocalStack
+                         |
+                         v
+                 Settlement Worker
+                         |
+                         v
+                 Hyperledger Besu
+                         |
+                         v
+                 SettlementLedger.sol
+
+
+Qwen 2.5 7B / Ollama
+          |
+       Spring AI
+          |
+      MCP Client :8082
+          |
+       MCP Server
+          |
+   +------+------+------+
+   |             |      |
+PostgreSQL      Besu  Reconciliation
 ```
 
-## Why MCP?
+## Transaction Lifecycle
 
-MCP provides a clean tool boundary between the AI assistant and application capabilities.
+```text
+POST /api/v1/money-movements
+        |
+        v
+Validate request
+        |
+        v
+Check idempotency key
+        |
+        v
+Persist transaction
+status=PENDING
+        |
+        v
+Publish settlement event
+        |
+        v
+SQS settlement-requests
+        |
+        v
+Settlement worker
+        |
+        v
+Submit to Besu
+        |
+        v
+Blockchain confirmation
+        |
+        v
+status=CONFIRMED
+        |
+        v
+Store blockchain transaction hash
+        |
+        v
+Reconciliation
+```
 
-Instead of giving the LLM unrestricted infrastructure access, LedgerBridge exposes specific operations.
+## Reliability Features
 
-## Why Qwen 2.5 7B?
+- Idempotency keys with database uniqueness constraint
+- Asynchronous SQS processing
+- At-least-once message handling
+- Worker idempotency
+- Retry behavior
+- Dead-letter queue
+- Blockchain duplicate settlement protection
+- Database-to-blockchain reconciliation
 
-The project uses a local Qwen 2.5 7B model through Ollama because the model supports tool calling and can run locally without sending transaction data to an external LLM service.
+## Security / DevSecOps
 
----
+GitHub security controls:
 
-# What Is Not Included
+```text
+CodeQL
+Dependabot
+Dependency Review
+Secret Scanning
+Push Protection
+```
 
-The project intentionally does not attempt to implement a production payment network.
+CodeQL provides SAST/source-code security analysis. Dependabot monitors dependencies for known vulnerabilities and updates. Dependency Review checks dependency changes introduced by pull requests. Secret Scanning and Push Protection detect/prevent supported secret leaks.
 
-It does not include:
+No private keys should be committed to the repository.
+
+## Repository Structure
+
+```text
+ledgerbridge/
+├── README.md
+├── LICENSE
+├── docker-compose.yml
+├── .gitignore
+├── .github/
+│   ├── dependabot.yml
+│   └── workflows/
+│       ├── ci.yml
+│       ├── codeql.yml
+│       └── dependency-review.yml
+├── blockchain/
+├── localstack/
+│   └── init/ready.d/create-sqs.sh
+└── services/
+    ├── settlement-api/
+    │   ├── build.gradle
+    │   ├── settings.gradle
+    │   ├── gradlew
+    │   └── src/
+    └── mcp-client/
+        ├── build.gradle
+        ├── settings.gradle
+        └── src/
+```
+
+The generated `besu-test-network/` directory is a local development artifact and should remain outside tracked application source unless intentionally added later.
+
+## Current Scope
+
+Included:
+
+- Spring Boot settlement API
+- PostgreSQL persistence
+- Idempotency
+- SQS / LocalStack
+- Settlement worker
+- Retry / DLQ
+- Hyperledger Besu
+- Solidity settlement contract
+- Blockchain settlement
+- Reconciliation
+- MCP server
+- MCP client
+- Spring AI
+- Ollama / Qwen 2.5 7B
+- Read-only AI settlement assistant
+- GitHub CI/security scanning
+
+Not included:
 
 - Real bank integrations
-- Real customer accounts
 - Real payment rails
+- Real customer funds
 - Production custody
 - Production key management
-- Regulatory/KYC/AML workflows
-- Real financial assets
+- KYC/AML
 - Asset tokenization
 - Public-chain deployment
 - Kafka
-- RAG/vector database infrastructure
+- RAG/vector database
 - Autonomous payment authorization
 
-These are outside the current portfolio scope.
-
----
-
-# Security Considerations
-
-The project demonstrates several security-oriented practices:
-
-- No private keys committed to source control
-- Blockchain credentials supplied through environment variables
-- AI assistant is read-only
-- Explicit separation between AI operations and transaction mutation
-- Database uniqueness constraint for idempotency
-- Smart contract validation
-- Duplicate settlement protection
-- Local/private blockchain for development
-
-A production system would require additional controls such as managed key custody, authorization, mTLS, secrets management, audit controls, regulatory controls, network isolation, and comprehensive security monitoring.
-
----
-
-# Current Implementation Status
-
-```text
-[✓] Spring Boot settlement API
-[✓] Java 25 / Gradle build
-[✓] PostgreSQL transaction persistence
-[✓] Idempotency
-[✓] Synchronous transaction flow
-[✓] SQS-compatible asynchronous settlement
-[✓] LocalStack
-[✓] Settlement worker
-[✓] Retry behavior
-[✓] Dead-letter queue
-[✓] Worker duplicate handling
-[✓] Hyperledger Besu integration
-[✓] Solidity SettlementLedger contract
-[✓] Blockchain settlement submission
-[✓] Blockchain settlement retrieval
-[✓] Database/blockchain reconciliation
-[✓] REST operational tools
-[✓] MCP server
-[✓] MCP Streamable HTTP
-[✓] MCP tool discovery
-[✓] MCP tool invocation
-[✓] Separate MCP client
-[✓] Spring AI ChatClient
-[✓] Ollama integration
-[✓] Qwen 2.5 7B
-[✓] LLM tool calling through MCP
-[✓] Read-only AI settlement assistant
-[✓] GitHub Actions CI
-```
-
----
-
-# Example End-to-End AI Flow
-
-Example question:
-
-```text
-Use the getTransactionLedger tool for transaction
-9c079d7b-38ef-4fc8-82cc-1e520c3892a7.
-Do not answer from general knowledge.
-Return the blockchain settlement details from the tool.
-```
-
-Architecture:
-
-```text
-Qwen 2.5 7B
-      │
-      │ tool call
-      ▼
-Spring AI
-      │
-      ▼
-MCP Client
-      │
-      ▼
-LedgerBridge MCP Server
-      │
-      ▼
-getTransactionLedger
-      │
-      ▼
-SettlementLedgerService
-      │
-      ▼
-Web3j
-      │
-      ▼
-Hyperledger Besu
-      │
-      ▼
-SettlementLedger.sol
-      │
-      ▼
-Actual on-chain settlement
-```
-
-The LLM then receives the tool result and generates a human-readable response.
-
----
-
-# Portfolio Value
-
-LedgerBridge combines:
-
-```text
-Enterprise API
-      +
-Persistent transaction state
-      +
-Asynchronous messaging
-      +
-Distributed-system reliability
-      +
-Blockchain settlement
-      +
-Reconciliation
-      +
-MCP
-      +
-LLM tool calling
-```
-
-The architecture demonstrates how AI can sit **on top of existing financial-system capabilities** rather than replacing the underlying transaction-processing system.
-
-The transaction system remains deterministic; the AI layer provides a natural-language operational interface over controlled tools.
-
----
-
-# Future Extensions
-
-Potential future extensions include:
-
-- Production-grade authentication and authorization
-- OAuth2 / JWT security
-- Role-based access control
-- OpenTelemetry tracing
-- Prometheus metrics
-- Structured audit events
-- Transaction history APIs
-- Multi-network blockchain support
-- Multiple settlement assets
-- Approval workflows
-- Human-in-the-loop AI operations
-- Additional MCP operational tools
-- AI-generated reconciliation explanations
-- Production secrets management
-- Cloud deployment
-
-These are future extensions rather than requirements for the current portfolio implementation.
-
----
-
-## Summary
-
-LedgerBridge is a portfolio implementation of an **AI-augmented blockchain settlement platform**.
-
-The system demonstrates a complete flow from:
-
-```text
-API request
-   ↓
-Database transaction
-   ↓
-Asynchronous settlement event
-   ↓
-SQS worker
-   ↓
-Private blockchain
-   ↓
-Smart contract
-   ↓
-Blockchain confirmation
-   ↓
-Reconciliation
-   ↓
-MCP tools
-   ↓
-Qwen-powered AI assistant
-```
-
-The key engineering principle is:
-
-```text
-Deterministic transaction processing
-                +
-Controlled AI-assisted operations
-```
-
-The blockchain, database, messaging, and reconciliation layers remain explicit application components, while the LLM interacts with them through narrowly defined MCP tools.
+Potential future work includes transactional outbox, stronger authentication/authorization, RBAC, OpenTelemetry, metrics, structured audit events, and production secrets management.
