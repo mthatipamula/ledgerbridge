@@ -5,18 +5,28 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
+
 @Service
 public class SettlementAssistant {
 
     private final ChatClient chatClient;
     private final ToolCallbackProvider toolCallbackProvider;
+    private final ToolCallback[] recordedToolCallbacks;
 
     public SettlementAssistant(
             ChatClient.Builder chatClientBuilder,
-            ToolCallbackProvider toolCallbackProvider) {
+            ToolCallbackProvider toolCallbackProvider,
+            AgentToolCallRecorder recorder) {
 
         this.chatClient = chatClientBuilder.build();
         this.toolCallbackProvider = toolCallbackProvider;
+
+        this.recordedToolCallbacks = Arrays.stream(
+                    toolCallbackProvider.getToolCallbacks())
+            .map(callback ->
+                    new RecordingToolCallback(callback, recorder))
+            .toArray(ToolCallback[]::new);
 
         System.out.println("MCP tool callbacks available:");
 
@@ -70,7 +80,7 @@ public class SettlementAssistant {
         concisely and factually.
         """)
                 .user(question)
-                .toolCallbacks(toolCallbackProvider)
+                .toolCallbacks(recordedToolCallbacks)
                 .call()
                 .content();
     }
