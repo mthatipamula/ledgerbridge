@@ -36,3 +36,7 @@ build/
 
 # Besu local development network
 besu-test-network/
+
+# Node.js
+node_modules/
+dist/
