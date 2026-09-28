@@ -327,7 +327,17 @@ AI assistant endpoint:
 POST http://localhost:8082/api/v1/assistant/ask
 ```
 
-Example:
+Example 1:
+```bash
+curl -X POST http://localhost:8082/api/v1/assistant/ask   -H "Content-Type: application/json"   -d '{
+    "question": "What is the status of transaction 9c079d7b-38ef-4fc8-82cc-1e520c3892a7?"
+  }'
+```
+```bash
+curl -X POST http://localhost:8082/api/v1/assistant/ask   -H "Content-Type: application/json"   -d '{
+    "question": "Reconcile transaction 9c079d7b-38ef-4fc8-82cc-1e520c3892a7"
+  }'
+```
 
 ```bash
 curl -X POST http://localhost:8082/api/v1/assistant/ask   -H "Content-Type: application/json"   -d '{

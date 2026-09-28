@@ -6,6 +6,7 @@ import com.ledgerbridge.settlement.domain.MoneyMovementTransaction;
 import com.ledgerbridge.settlement.repository.MoneyMovementTransactionRepository;
 import org.springframework.stereotype.Service;
 
+import java.math.BigInteger;
 import java.util.UUID;
 
 @Service
@@ -42,6 +43,31 @@ public class ReconciliationService {
                         exception);
         }
 
+        System.out.println("=== Reconciliation Debug ===");
+
+        System.out.println("DB transaction ID: " + transaction.getId());
+        System.out.println("Blockchain transaction ID: "
+                + ledgerSettlement.transactionId());
+
+        System.out.println("DB source: " + transaction.getSourceAccountId());
+        System.out.println("Blockchain source: "
+                + ledgerSettlement.sourceAccount());
+
+        System.out.println("DB destination: "
+                + transaction.getDestinationAccountId());
+        System.out.println("Blockchain destination: "
+                + ledgerSettlement.destinationAccount());
+
+        System.out.println("DB amount minor units: "
+                + transaction.getAmount()
+                        .movePointRight(2)
+                        .toBigIntegerExact());
+        System.out.println("Blockchain amount: " + ledgerSettlement.amount());
+
+        System.out.println("DB currency: " + transaction.getCurrency());
+        System.out.println("Blockchain currency: "
+                + ledgerSettlement.currency());
+
         boolean matched =
                 transaction.getId().toString()
                         .equals(ledgerSettlement.transactionId())
@@ -52,9 +78,11 @@ public class ReconciliationService {
                         && transaction.getAmount()
                         .movePointRight(2)
                         .toBigIntegerExact()
-                        .equals(ledgerSettlement.amount())
+                        .equals(BigInteger.valueOf(ledgerSettlement.amount()))
                         && transaction.getCurrency()
                         .equals(ledgerSettlement.currency());
+
+        System.out.println("Reconciliation matched: " + matched);
 
         String message = matched
                 ? "Database transaction matches blockchain settlement"
