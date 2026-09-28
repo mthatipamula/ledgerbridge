@@ -6,7 +6,6 @@ import com.ledgerbridge.settlement.domain.MoneyMovementTransaction;
 import com.ledgerbridge.settlement.repository.MoneyMovementTransactionRepository;
 import org.springframework.stereotype.Service;
 
-import java.math.BigInteger;
 import java.util.UUID;
 
 @Service
