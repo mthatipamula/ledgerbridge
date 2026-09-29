@@ -33,6 +33,7 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     runtimeOnly 'org.postgresql:postgresql'
+    implementation 'com.google.cloud:google-cloud-bigquery:2.52.0'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

@@ -53,6 +53,8 @@ public class SettlementAssistant {
         - getTransaction: retrieve the database transaction
         - getTransactionLedger: retrieve the blockchain settlement
         - reconcileTransaction: compare database and blockchain
+        - getSettlementAnalytics: retrieve settlement analytics
+        - getDailySettlementMetrics: retrieve daily settlement metrics
 
         For blockchain settlement status, use
         getTransactionLedger.

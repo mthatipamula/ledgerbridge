@@ -35,5 +35,11 @@ ledgerbridge:
   repository:
     type: postgres
 
+  analytics:
+    bigquery:
+      project-id: ${BIGQUERY_PROJECT_ID:my-test-project-279216}
+      dataset-id: ${BIGQUERY_DATASET_ID:ledgerbridge_analytics}
+      table-id: ${BIGQUERY_TABLE_ID:settlement_transactions}
+
   sqs:
     settlement-queue-url: ${LEDGERBRIDGE_SQS_QUEUE_URL:http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/settlement-requests}
