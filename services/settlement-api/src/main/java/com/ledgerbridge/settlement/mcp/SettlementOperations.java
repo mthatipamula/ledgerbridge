@@ -7,8 +7,13 @@ import com.ledgerbridge.settlement.domain.MoneyMovementTransaction;
 import com.ledgerbridge.settlement.reconciliation.ReconciliationResult;
 import com.ledgerbridge.settlement.reconciliation.ReconciliationService;
 import com.ledgerbridge.settlement.repository.MoneyMovementTransactionRepository;
+import com.ledgerbridge.settlement.analytics.BigQuerySettlementExportService;
+import com.ledgerbridge.settlement.analytics.BigQuerySettlementExportService.DailySettlementMetric;
+import com.ledgerbridge.settlement.analytics.SettlementAnalyticsRepository;
+import com.ledgerbridge.settlement.analytics.SettlementAnalyticsRepository.SettlementAnalyticsSummary;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -17,15 +22,21 @@ public class SettlementOperations {
     private final MoneyMovementTransactionRepository transactionRepository;
     private final SettlementLedgerService settlementLedgerService;
     private final ReconciliationService reconciliationService;
+    private final SettlementAnalyticsRepository analyticsRepository;
+    private final BigQuerySettlementExportService bigQuerySettlementExportService;  
 
     public SettlementOperations(
             MoneyMovementTransactionRepository transactionRepository,
             SettlementLedgerService settlementLedgerService,
-            ReconciliationService reconciliationService) {
+            ReconciliationService reconciliationService,
+            SettlementAnalyticsRepository analyticsRepository,
+            BigQuerySettlementExportService bigQuerySettlementExportService) {
 
         this.transactionRepository = transactionRepository;
         this.settlementLedgerService = settlementLedgerService;
         this.reconciliationService = reconciliationService;
+        this.analyticsRepository = analyticsRepository;
+        this.bigQuerySettlementExportService = bigQuerySettlementExportService;
     }
 
     @Tool(description = "Retrieve a money movement transaction by transaction ID")
@@ -77,5 +88,25 @@ public class SettlementOperations {
         String amount,
         String currency,
         long timestamp) {
+    }
+
+    @Tool(description = """
+        Retrieve aggregate settlement analytics from PostgreSQL,
+        including total transaction count, counts by status,
+        total amounts by currency, failed transactions,
+        and disputed transactions. This operation is read-only.
+        """)
+    public SettlementAnalyticsSummary getSettlementAnalytics() {
+        return analyticsRepository.getSummary();
+    }
+
+    @Tool(description = """
+        Retrieve daily settlement metrics from BigQuery, including
+        settlement date, currency, transaction status, transaction count,
+        total amount, failed transaction count, and disputed transaction
+        count. This operation is read-only.
+        """)
+    public List<DailySettlementMetric> getDailySettlementMetrics() {
+        return bigQuerySettlementExportService.getDailySettlementMetrics();
     }
 }
