@@ -1,3 +1,7 @@
+Copyright © 2026 Mahesh Thatipamula. All rights reserved.
+
+This repository contains proprietary software. No license is granted to use, copy, modify, or distribute the source code without prior written permission.
+
 # LedgerBridge
 
 ## AI-Augmented Blockchain Money Movement & Settlement Platform
